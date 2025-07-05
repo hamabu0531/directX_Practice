@@ -1,13 +1,16 @@
 #include "framework.h"
+
+// DirectXクラスを使えるようにする
+#include "Source/DirectX/DirectX.h"
+
 // GameSystemクラスを使えるようにする
 #include "GameSystem.h"
-// Direct3Dクラスを使えるようにする
-#include "Source/DirectX/Direct3D.h"
 
 // ゲームの初期設定を行う
 void GameSystem::Initialize()
 {
-
+	// 画像の読み込み
+	m_tex.Load("Data/Logo.png");
 }
 
 // ゲーム世界の時間を進める(処理を実行する)
@@ -21,17 +24,20 @@ void GameSystem::Execute()
 	{
 		// 三角形の描画
 		{
-			// １頂点の形式(今回は座標だけ)
+
 			struct VertexType
 			{
 				DirectX::XMFLOAT3 Pos;	// 座標
+				DirectX::XMFLOAT2 UV;	// UV座標
 			};
-			// 三角形を作るため、頂点を３つ作る(3頂点の座標で、画面の中心は(0, 0, 0))
-			VertexType v[3] = {
-				{{0,0,0}},
-				{{1,-1,0}},
-				{{-1,-1,0}},
+			// 三角形を作るため、頂点を３つ作る
+			VertexType v[4] = {
+				{{-0.5f, -0.5f, 0}, {0, 1}},
+				{{-0.5f,  0.5f, 0}, {0, 0}},
+				{{ 0.5f, -0.5f, 0}, {1, 1}},
+				{{ 0.5f,  0.5f, 0}, {1, 0}},
 			};
+
 
 			//-----------------------------
 			// 頂点バッファ作成
@@ -63,24 +69,27 @@ void GameSystem::Execute()
 			// 頂点バッファを描画で使えるようにセットする
 			UINT stride = sizeof(VertexType);
 			UINT offset = 0;
-			D3D.m_deviceContext->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
+			D3D.m_deviceContext->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset); // 頂点バッファはこれを使ってね
 			// プロミティブ・トポロジーをセット
-			D3D.m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			D3D.m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); // ちなみに、頂点はこんな感じで使ってほしいな
 
 			//-----------------------------
 			// シェーダーをセット
 			//-----------------------------
-			D3D.m_deviceContext->VSSetShader(D3D.m_spriteVS.Get(), 0, 0);
-			D3D.m_deviceContext->PSSetShader(D3D.m_spritePS.Get(), 0, 0);
-			D3D.m_deviceContext->IASetInputLayout(D3D.m_spriteInputLayout.Get());
+			D3D.m_deviceContext->VSSetShader(D3D.m_spriteVS.Get(), 0, 0); // これらの頂点は、こんな計算で変換してください
+			D3D.m_deviceContext->PSSetShader(D3D.m_spritePS.Get(), 0, 0); // 面になったときはこんな計算で色を付けて
+			D3D.m_deviceContext->IASetInputLayout(D3D.m_spriteInputLayout.Get()); // 頂点はこんな構造になってます
 
 			// こんな感じで、ひたすらデバイスコンテキストに情報を渡す
+
+			// テクスチャを、ピクセルシェーダーのスロット0にセット
+			D3D.m_deviceContext->PSSetShaderResources(0, 1, m_tex.m_srv.GetAddressOf());
 
 			//-----------------------------
 			// 描画実行
 			//-----------------------------
 			// デバイスコンテキストくん、上記のセットした内容で描画してください、とお願いする
-			D3D.m_deviceContext->Draw(3, 0);
+			D3D.m_deviceContext->Draw(4, 0); // よし、頂点をn個描画してね
 
 		}
 	}
